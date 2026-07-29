@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#050a18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AirplaneGame">
+  <link rel="icon" href="assets/images/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+  <title>AirplaneGame Clone 1.0</title>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    :root{color-scheme:dark;--cyan:#55e7ff;--gold:#ffd35a;--red:#ff596d;--panel:rgba(7,15,35,.88)}
+    html,body{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#02050d;font-family:"Microsoft YaHei",system-ui,sans-serif;touch-action:none}
+    button{font:inherit;color:inherit}
+    #app{position:fixed;inset:0;height:100%;height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at 50% 12%,#172f5e 0,#081127 38%,#02040b 100%)}
+    #gameShell{position:relative;width:min(100vw,56.25dvh);height:min(100dvh,177.78vw);max-width:520px;max-height:100dvh;overflow:hidden;background:#050b18;box-shadow:0 0 50px #000}
+    canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+    .screen{position:absolute;inset:0;z-index:4;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;background:linear-gradient(rgba(2,7,19,.3),rgba(2,7,19,.82)),url("assets/images/background0.gif") center/cover}
+    .hidden{display:none!important}
+    .title{margin-top:9vh;max-width:100%;font-size:clamp(20px,5.5vw,34px);font-weight:900;letter-spacing:.02em;white-space:nowrap;color:#fff;text-shadow:0 0 10px var(--cyan),0 0 32px #178bff}
+    .sub{color:#a9dfff;letter-spacing:.35em;margin:6px 0 9vh}
+    .menu{width:min(82%,350px);display:grid;gap:13px}
+    .btn{min-height:52px;border:1px solid rgba(91,231,255,.5);border-radius:15px;background:linear-gradient(110deg,rgba(17,48,89,.96),rgba(8,20,44,.96));box-shadow:inset 0 0 18px rgba(36,162,255,.12),0 6px 22px #0008;font-weight:800;font-size:18px;letter-spacing:.12em}
+    .btn:active{transform:scale(.97);filter:brightness(1.25)}
+    .btn.primary{color:#04111a;border:0;background:linear-gradient(110deg,#58edff,#72a8ff);box-shadow:0 0 24px #38c9ff66}
+    .btn.danger{border-color:#ff7080;background:linear-gradient(110deg,#7b2035,#37101f)}
+    .version{margin-top:auto;color:#7d91b8;font-size:12px}
+    .topline{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .heading{font-size:26px;font-weight:900;letter-spacing:.08em}
+    .iconBtn{width:44px;height:44px;border-radius:14px;border:1px solid #71dfff66;background:#0a1835dd;font-size:22px}
+    .cards{width:100%;margin-top:18px;display:grid;grid-template-columns:repeat(5,1fr);gap:9px;overflow:auto;padding:2px 1px 14px}
+    .level{aspect-ratio:1;border:1px solid #63d8ff55;border-radius:13px;background:#0c1d3bdd;font-weight:900;position:relative}
+    .level.locked{opacity:.38;filter:grayscale(1)}
+    .level.boss{border-color:#ff687d;color:#ff9ba8}
+    .level small{display:block;font-size:9px;color:#85a9cf}
+    .panel{width:100%;margin-top:14px;padding:14px;border:1px solid #5edfff44;border-radius:18px;background:var(--panel);overflow:auto}
+    .shopTabs{display:flex;gap:8px;margin-bottom:12px}
+    .shopTabs .btn{flex:1;min-height:42px;font-size:14px}
+    .coin{color:var(--gold);font-size:18px;font-weight:900}
+    .shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .item{padding:11px;border:1px solid #ffffff1f;border-radius:14px;background:#0a1730;text-align:center}
+    .item img{width:66px;height:66px;object-fit:contain}
+    .item h3{margin:5px 0;font-size:14px}.item p{margin:5px;color:#a9bad8;font-size:12px}
+    .item .btn{min-height:38px;width:100%;font-size:12px;letter-spacing:0}
+    .guide{line-height:1.8;color:#c8dcfa;font-size:15px}.guide b{color:var(--cyan)}
+    .saveCode{width:100%;min-height:116px;resize:none;padding:12px;border:1px solid #5edfff55;border-radius:12px;background:#030a18;color:#d9f7ff;font:12px/1.5 monospace;word-break:break-all;touch-action:manipulation}
+    #hud{position:absolute;z-index:3;inset:0;pointer-events:none;padding:max(10px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column}
+    .hudTop{display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 4px #000;font-size:14px;font-weight:900}
+    .bars{width:44%}.bar{height:8px;margin-top:4px;border-radius:99px;background:#202a42;overflow:hidden;border:1px solid #fff3}.fill{height:100%;background:linear-gradient(90deg,#ff3f5f,#ffbb58)}
+    .hudActions{margin-top:auto;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:flex-end;pointer-events:auto}
+    .roundBtn{width:66px;height:66px;border-radius:50%;border:2px solid #67eaff88;background:#071833cc;box-shadow:0 0 20px #21cfff44;font-size:12px;font-weight:900}
+    .roundBtn span{display:block;font-size:25px}.roundBtn.bomb{border-color:#ffcb5d;background:#4a2d08cc}
+    #toast{position:absolute;z-index:8;top:42%;left:50%;transform:translate(-50%,-50%);min-width:65%;padding:14px 18px;border:1px solid #70e8ff77;border-radius:14px;background:#030b1aeb;text-align:center;font-weight:900;font-size:20px;pointer-events:none;opacity:0;transition:opacity .2s}
+    #modal{position:absolute;z-index:10;inset:0;display:grid;place-items:center;padding:24px;background:#020713cc;backdrop-filter:blur(5px)}
+    .modalCard{width:100%;padding:24px;border:1px solid #61dcff66;border-radius:22px;background:#07132af2;text-align:center;box-shadow:0 20px 50px #000}
+    .modalCard h2{font-size:28px;margin:0 0 8px}.modalCard p{color:#bed4f5;line-height:1.7}.modalCard .menu{width:100%;margin-top:18px}
+    @media (max-height:620px){.title{margin-top:4vh}.sub{margin-bottom:4vh}.btn{min-height:45px}.screen{padding:10px 14px}.panel{margin-top:8px}}
+    @media (orientation:landscape) and (pointer:coarse){
+      .hudActions{padding:0 8px max(62px,env(safe-area-inset-bottom))}
+      .roundBtn{width:60px;height:60px}
+    }
+  </style>
+</head>
+<body>
+<div id="app"><main id="gameShell" aria-label="AirplaneGame Clone 手机游戏">
+  <canvas id="game" width="450" height="800"></canvas>
+  <section id="home" class="screen">
+    <div class="title">AirplaneGame</div><div class="sub">CLONE 1.0</div>
+    <div class="menu">
+      <button class="btn primary" data-action="levels">开始战斗</button>
+      <button class="btn" data-action="shop">战机商店</button>
+      <button class="btn" data-action="saves">存档管理</button>
+      <button class="btn" data-action="guide">操作指南</button>
+    </div>
+    <div class="version">AirplaneGame Clone 1.0</div>
+  </section>
+  <section id="levels" class="screen hidden">
+    <div class="topline"><button class="iconBtn" data-action="home">‹</button><div class="heading">选择关卡</div><div class="coin">◆ <span class="coinValue">0</span></div></div>
+    <div id="levelGrid" class="cards"></div>
+    <div class="version">AirplaneGame Clone 1.0</div>
+  </section>
+  <section id="shop" class="screen hidden">
+    <div class="topline"><button class="iconBtn" data-action="home">‹</button><div class="heading">战机商店</div><div class="coin">◆ <span class="coinValue">0</span></div></div>
+    <div class="panel"><div class="shopTabs"><button class="btn primary" id="upgradeTab">能力升级</button><button class="btn" id="fighterTab">战机仓库</button></div><div id="shopContent"></div></div>
+  </section>
+  <section id="guide" class="screen hidden">
+    <div class="topline"><button class="iconBtn" data-action="home">‹</button><div class="heading">操作指南</div><div></div></div>
+    <div class="panel guide">
+      <p><b>移动：</b>在战斗区域按住并拖动，战机会跟随手指；也可用键盘 WASD。</p>
+      <p><b>射击：</b>自动连续射击。升级射速和弹幕，可显著提升火力。</p>
+      <p><b>清屏炸弹：</b>点击右下角炸弹按钮，消灭普通敌机并重创 Boss。</p>
+      <p><b>胜利：</b>普通关卡坚持倒计时并清理敌机；第 10、20 关需要击败 Boss。</p>
+      <p><b>成长：</b>结算金币可购买新战机、生命、射速、弹幕、追踪弹与金币加成。</p>
+    </div>
+  </section>
+  <section id="saves" class="screen hidden">
+    <div class="topline"><button class="iconBtn" data-action="home">‹</button><div class="heading">存档管理</div><div></div></div>
+    <div class="panel guide">
+      <p><b>自动存档：</b>每次结算、购物和升级后，进度会同时写入两份浏览器存储。</p>
+      <p><b>存档码：</b>点击生成后复制并妥善保存。换手机或浏览器时，把存档码粘贴到下方并点击“解析并恢复”。</p>
+      <textarea id="saveCode" class="saveCode" spellcheck="false" placeholder="在这里生成或粘贴存档码"></textarea>
+      <div class="menu" style="width:100%;margin-top:18px">
+        <button class="btn primary" id="makeSaveCode">生成并复制存档码</button>
+        <button class="btn" id="restoreSaveCode">解析并恢复</button>
+      </div>
+      <p id="saveStatus" style="text-align:center;color:#8eadcf">最近自动保存：尚无记录</p>
+      <p style="text-align:center;color:#6f89ad;font-size:12px">AirplaneGame Clone 1.0</p>
+    </div>
+  </section>
+  <div id="hud" class="hidden">
+    <div class="hudTop"><div class="bars">生命 <span id="hpText"></span><div class="bar"><div id="hpFill" class="fill"></div></div><div id="bossWrap" class="hidden">BOSS<div class="bar"><div id="bossFill" class="fill"></div></div></div></div><div style="text-align:right"><div>第 <span id="hudLevel">1</span> 关</div><div>得分 <span id="score">0</span></div><div>时间 <span id="time">0</span></div></div></div>
+    <div class="hudActions"><button class="roundBtn" id="pauseBtn"><span>Ⅱ</span>暂停</button><button class="roundBtn bomb" id="bombBtn"><span>✹</span>炸弹 ×<b id="bombCount">0</b></button></div>
+  </div>
+  <div id="toast"></div>
+  <div id="modal" class="hidden"><div class="modalCard"><h2 id="modalTitle"></h2><p id="modalText"></p><div id="modalBtns" class="menu"></div></div></div>
+</main></div>
+<script>
+(()=>{"use strict";
+const W=450,H=800,cv=document.querySelector("#game"),ctx=cv.getContext("2d"),$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const paths={player:["player.gif","player1.gif","player2.gif","player3.gif"],bullet:["bullet.gif","bullet1.gif","bullet2.gif","bullet3.gif"],alien:"alien.gif",boss:"boss.gif",bomb:"bomb.gif",explosion:"explosion.gif",bg:["background1.gif","background2.gif","background3.gif"]};
+const imgs={}; for(const [k,v] of Object.entries(paths)){if(Array.isArray(v))imgs[k]=v.map(n=>loadImg(n));else imgs[k]=loadImg(v)} function loadImg(n){const i=new Image;i.src="assets/images/"+n;return i}
+const music=new Audio("assets/sounds/sound.mp3"),boom=new Audio("assets/sounds/boom.wav"); music.loop=true;music.volume=.28;boom.volume=.35;
+const VERSION="AirplaneGame Clone 1.0";
+const defaults={coin:0,unlock:1,maxHp:1,shot:1,bullet:1,boost:false,track:false,bombs:0,fighter:0,bought:[0],savedAt:0};
+let save;try{save={...defaults,...JSON.parse(localStorage.airplaneClone||"{}")}}catch{save={...defaults}}
+const dbReady=new Promise(resolve=>{if(typeof indexedDB==="undefined")return resolve(null);const q=indexedDB.open("AirplaneGameSave",1);q.onupgradeneeded=()=>q.result.createObjectStore("saves");q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null)});
+async function dbWrite(data){const db=await dbReady;if(!db)return;const tx=db.transaction("saves","readwrite");tx.objectStore("saves").put(data,"main")}
+async function dbRead(){const db=await dbReady;if(!db)return null;return new Promise(r=>{const q=db.transaction("saves").objectStore("saves").get("main");q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)})}
+const persist=()=>{save.savedAt=Date.now();const raw=JSON.stringify(save);localStorage.airplaneClone=raw;dbWrite(save);updateCoins();updateSaveStatus()};
+let state="menu",level=1,last=0,elapsed=0,spawnClock=0,shotClock=0,bombClock=0,score=0,paused=false,ended=false,bossSpawned=false,drag=false,raf=0;
+let player={},bullets=[],enemies=[],enemyBullets=[],particles=[],bossObj=null;
+const cfg=n=>({wave:n<6?4+n:n<10?11+n:20,speed:1.15+Math.min(n,10)*.12,time:n%10===0?20:n===1?15:30,homing:n>10?Math.min(.3,(n-10)*.05):0,elite:n>15?Math.min(.5,(n-15)*.05):0,fast:n>20?(n-20)*.1:0});
+function show(id){$$(".screen").forEach(x=>x.classList.add("hidden"));$("#hud").classList.add("hidden");if(id)$("#"+id).classList.remove("hidden");state=id||"play";updateCoins()}
+function updateCoins(){$$(".coinValue").forEach(x=>x.textContent=save.coin)}
+function updateSaveStatus(){const el=$("#saveStatus");if(el)el.textContent=save.savedAt?"最近自动保存："+new Date(save.savedAt).toLocaleString():"最近自动保存：尚无记录"}
+function levels(){const g=$("#levelGrid");g.innerHTML="";for(let i=1;i<=25;i++){const b=document.createElement("button");b.className="level"+(i>save.unlock?" locked":"")+(i%10===0?" boss":"");b.innerHTML=i+(i%10===0?"<small>BOSS</small>":"<small>关卡</small>");b.disabled=i>save.unlock;b.onclick=()=>start(i);g.append(b)}show("levels")}
+const upgradeItems=[
+ ["生命强化","提升最大生命值",40,"maxHp",3],["射速强化","缩短自动射击间隔",50,"shot",3],["弹幕强化","增加每轮子弹数量",60,"bullet",3],
+ ["金币加成","结算金币提升至 1.5 倍",120,"boost",true],["追踪子弹","子弹自动追击敌机",180,"track",true],["清屏炸弹","战斗中立即清屏",30,"bombs",99]];
+function renderUpgrades(){$("#shopContent").innerHTML='<div class="shopGrid">'+upgradeItems.map(([n,d,p,k,max])=>{const val=save[k],done=max===true?val:val>=max;return `<div class="item"><h3>${n}</h3><p>${d}</p><p>${k==="bombs"?"持有 "+val:"等级 "+(typeof val==="boolean"?(val?"已拥有":"未拥有"):val)}</p><button class="btn ${done&&k!=="bombs"?"":"primary"}" data-buy="${k}" ${done&&k!=="bombs"?"disabled":""}>${done&&k!=="bombs"?"已满级":"◆ "+p}</button></div>`}).join("")+"</div>";
+ $$("[data-buy]").forEach(b=>b.onclick=()=>buyUpgrade(b.dataset.buy))}
+function buyUpgrade(k){const it=upgradeItems.find(x=>x[3]===k),price=it[2];if(save.coin<price)return toast("金币不足");save.coin-=price;if(k==="boost"||k==="track")save[k]=true;else save[k]++;persist();renderUpgrades();toast("升级成功")}
+function renderFighters(){const names=["原始坦克","翡翠幻影","苍蓝幻影","赤焰重装"];$("#shopContent").innerHTML='<div class="shopGrid">'+names.map((n,i)=>`<div class="item"><img src="assets/images/${paths.player[i]}"><h3>${n}</h3><p>${i?"专属战机与子弹":"经典初始战机"}</p><button class="btn ${save.fighter===i?"":"primary"}" data-fighter="${i}">${save.fighter===i?"使用中":save.bought.includes(i)?"装备":"◆ 150"}</button></div>`).join("")+"</div>";
+ $$("[data-fighter]").forEach(b=>b.onclick=()=>fighter(+b.dataset.fighter))}
+function fighter(i){if(!save.bought.includes(i)){if(save.coin<150)return toast("金币不足");save.coin-=150;save.bought.push(i)}save.fighter=i;persist();renderFighters();toast("战机已装备")}
+$("#upgradeTab").onclick=()=>{$("#upgradeTab").classList.add("primary");$("#fighterTab").classList.remove("primary");renderUpgrades()};
+$("#fighterTab").onclick=()=>{$("#fighterTab").classList.add("primary");$("#upgradeTab").classList.remove("primary");renderFighters()};
+$$("[data-action]").forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==="levels")levels();else if(a==="shop"){show("shop");renderUpgrades()}else show(a)});
+function encodeSave(){const pkg={version:VERSION,data:save};return btoa(unescape(encodeURIComponent(JSON.stringify(pkg))))}
+function decodeSave(code){const pkg=JSON.parse(decodeURIComponent(escape(atob(code.replace(/\s/g,"")))));if(pkg.version!==VERSION||!pkg.data)throw Error("version");const data=pkg.data;if(typeof data.coin!=="number"||typeof data.unlock!=="number")throw Error("data");return data}
+$("#makeSaveCode").onclick=async()=>{persist();const code=encodeSave();$("#saveCode").value=code;$("#saveCode").select();try{await navigator.clipboard.writeText(code);toast("存档码已生成并复制")}catch{toast("存档码已生成，请长按复制")}};
+$("#restoreSaveCode").onclick=()=>{try{const data=decodeSave($("#saveCode").value.trim());save={...defaults,...data,bought:Array.isArray(data.bought)?data.bought:[0]};persist();renderUpgrades();toast("存档码解析成功，进度已恢复")}catch(e){toast(e.message==="version"?"存档版本不匹配":"存档码无效")}};
+function start(n){level=n;const c=cfg(n);score=0;elapsed=0;spawnClock=0;shotClock=0;bombClock=0;ended=false;paused=false;bossSpawned=false;bossObj=null;bullets=[];enemies=[];enemyBullets=[];particles=[];player={x:W/2,y:H-110,w:save.fighter?70:74,h:save.fighter?70:50,hp:save.maxHp,inv:0};show(null);$("#hud").classList.remove("hidden");$("#hudLevel").textContent=n;$("#bossWrap").classList.add("hidden");$("#bombCount").textContent=save.bombs;music.currentTime=0;music.play().catch(()=>{});toast(n%10===0?"Boss 警报！":"战斗开始");last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop)}
+function spawnEnemy(){const c=cfg(level),r=Math.random(),type=r<c.elite?"elite":r<c.elite+c.homing?"homing":r<c.elite+c.homing+c.fast?"fast":"normal";enemies.push({x:35+Math.random()*(W-70),y:-45,w:type==="elite"?58:42,h:type==="elite"?52:38,hp:type==="elite"?2:1,max:type==="elite"?2:1,type,v:c.speed*(type==="fast"?1.6:1),phase:Math.random()*6.28,fire:800+Math.random()*1600})}
+function spawnBoss(){bossSpawned=true;bossObj={x:W/2,y:85,w:125,h:100,hp:20+Math.floor(level/10)*10,max:20+Math.floor(level/10)*10,t:0,dir:1};$("#bossWrap").classList.remove("hidden");toast("强敌来袭")}
+function shoot(){const count=save.bullet,spread=14;for(let i=0;i<count;i++){const a=(i-(count-1)/2)*spread*Math.PI/180;bullets.push({x:player.x,y:player.y-player.h/2,w:save.fighter?12:7,h:22,vx:Math.sin(a)*5,vy:-9*Math.cos(a),target:null})}}
+function loop(now){if(state!=="play")return;const dt=Math.min(34,now-last);last=now;if(!paused&&!ended)update(dt);draw();raf=requestAnimationFrame(loop)}
+function update(dt){const c=cfg(level);elapsed+=dt;spawnClock+=dt;shotClock+=dt;bombClock+=dt;player.inv=Math.max(0,player.inv-dt);
+ if(shotClock>210-(save.shot-1)*55){shotClock=0;shoot()}
+ if(!bossSpawned&&level%10===0&&elapsed>c.time*1000*.45)spawnBoss();
+ if(!bossObj&&elapsed<c.time*1000&&spawnClock>Math.max(360,900-level*18)&&enemies.length<c.wave){spawnClock=0;spawnEnemy()}
+ for(const b of bullets){if(save.track){let t=b.target;if(!t||t.hp<=0)t=b.target=[...enemies,bossObj].filter(Boolean).sort((a,z)=>(a.x-b.x)**2+(a.y-b.y)**2-((z.x-b.x)**2+(z.y-b.y)**2))[0];if(t){const dx=t.x-b.x,dy=t.y-b.y,d=Math.hypot(dx,dy)||1;b.vx+=dx/d*.45;b.vy+=dy/d*.45;const s=Math.hypot(b.vx,b.vy);b.vx=b.vx/s*9;b.vy=b.vy/s*9}}b.x+=b.vx;b.y+=b.vy}
+ bullets=bullets.filter(b=>b.y>-40&&b.x>-30&&b.x<W+30);
+ enemies.forEach(e=>{e.y+=e.v*dt/16;e.x+=Math.sin(e.y/45+e.phase)*1.2;e.fire-=dt;if(e.type==="homing"&&e.fire<0){e.fire=1600;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);enemyBullets.push({x:e.x,y:e.y+20,vx:dx/d*4,vy:dy/d*4})}else if(e.fire<0){e.fire=1400+Math.random()*1000;enemyBullets.push({x:e.x,y:e.y+20,vx:0,vy:4.2})}});
+ if(bossObj){bossObj.t+=dt;bossObj.x+=bossObj.dir*(2.4+level/20)*dt/16;if(bossObj.x<70||bossObj.x>W-70)bossObj.dir*=-1;if(bossObj.t>1100){bossObj.t=0;[-.55,0,.55].forEach(a=>enemyBullets.push({x:bossObj.x,y:bossObj.y+45,vx:Math.sin(a)*5,vy:Math.cos(a)*5}))}}
+ enemyBullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy});enemyBullets=enemyBullets.filter(b=>b.y<H+30&&b.x>-30&&b.x<W+30);
+ hitTests();enemies=enemies.filter(e=>e.hp>0&&e.y<H+60);particles.forEach(p=>{p.life-=dt;p.r+=dt*.035});particles=particles.filter(p=>p.life>0);
+ const remain=Math.max(0,Math.ceil(c.time-elapsed/1000));$("#time").textContent=remain;$("#score").textContent=score;$("#hpText").textContent=player.hp+"/"+save.maxHp;$("#hpFill").style.width=player.hp/save.maxHp*100+"%";if(bossObj)$("#bossFill").style.width=bossObj.hp/bossObj.max*100+"%";
+ if(player.hp<=0)finish(false);else if(level%10===0?bossSpawned&&!bossObj:elapsed>=c.time*1000&&enemies.length===0)finish(true)}
+ function hitTests(){for(const b of bullets){for(const e of [...enemies,bossObj].filter(Boolean)){if(overlap(b,e)){b.y=-99;e.hp--;spark(e.x,e.y);if(e.hp<=0){score+=e===bossObj?50:e.type==="elite"?2:1;if(e===bossObj)bossObj=null;boom.currentTime=0;boom.play().catch(()=>{})}break}}}
+ for(const e of enemies){if(overlap(player,e)){e.hp=0;damage()}}for(const b of enemyBullets){if(overlap(player,{...b,w:14,h:20})){b.y=999;damage()}}}
+ function damage(){if(player.inv>0)return;player.hp--;player.inv=1200;if(navigator.vibrate)navigator.vibrate(45);spark(player.x,player.y)}
+ function overlap(a,b){return Math.abs(a.x-b.x)<(a.w+b.w)/2*.72&&Math.abs(a.y-b.y)<(a.h+b.h)/2*.72}
+ function spark(x,y){particles.push({x,y,r:8,life:280})}
+ function finish(win){if(ended)return;ended=true;music.pause();const baseReward=10+level*2;let coins=win?Math.floor((score+baseReward)*(save.boost?1.5:1)):0;if(win){save.coin+=coins;if(level===save.unlock&&save.unlock<25)save.unlock++;persist()}modal(win?"任务完成":"战机坠毁",win?`得分 ${score}，获得 ${coins} 金币`:`本次得分 ${score}，强化战机后再来挑战吧`,[{t:win&&level<25?"下一关":"重新挑战",f:()=>{hideModal();start(win&&level<25?level+1:level)}},{t:"返回关卡",f:()=>{hideModal();levels()}}])}
+ function draw(){const bg=imgs.bg[Math.min(2,Math.floor((level-1)/10))];if(bg.complete)ctx.drawImage(bg,0,0,W,H);else{ctx.fillStyle="#06122c";ctx.fillRect(0,0,W,H)}
+ ctx.fillStyle="rgba(1,5,16,.18)";ctx.fillRect(0,0,W,H);bullets.forEach(b=>sprite(imgs.bullet[save.fighter],b.x,b.y,b.w,b.h));enemyBullets.forEach(b=>sprite(imgs.bomb,b.x,b.y,13,20));
+ enemies.forEach(e=>{sprite(imgs.alien,e.x,e.y,e.w,e.h);if(e.type!=="normal"){ctx.fillStyle=e.type==="elite"?"#ff4e70":e.type==="homing"?"#5cffe6":"#ffd45c";ctx.fillRect(e.x-e.w/2,e.y-e.h/2-5,e.w*e.hp/e.max,3)}});
+ if(bossObj)sprite(imgs.boss,bossObj.x,bossObj.y,bossObj.w,bossObj.h);if(!player.inv||Math.floor(player.inv/90)%2===0)sprite(imgs.player[save.fighter],player.x,player.y,player.w,player.h);
+ particles.forEach(p=>{ctx.save();ctx.globalAlpha=p.life/280;ctx.drawImage(imgs.explosion,p.x-p.r,p.y-p.r,p.r*2,p.r*2);ctx.restore()});if(paused){ctx.fillStyle="#020713aa";ctx.fillRect(0,0,W,H);ctx.fillStyle="#fff";ctx.font="bold 32px sans-serif";ctx.textAlign="center";ctx.fillText("已暂停",W/2,H/2)}}
+ function sprite(img,x,y,w,h){if(img.complete)ctx.drawImage(img,x-w/2,y-h/2,w,h)}
+ function pointer(e){if(state!=="play"||paused)return;const r=cv.getBoundingClientRect(),p=e.touches?e.touches[0]:e;player.x=Math.max(player.w/2,Math.min(W-player.w/2,(p.clientX-r.left)*W/r.width));player.y=Math.max(95,Math.min(H-player.h/2-8,(p.clientY-r.top)*H/r.height))}
+ cv.addEventListener("pointerdown",e=>{drag=true;pointer(e)});addEventListener("pointermove",e=>{if(drag)pointer(e)});addEventListener("pointerup",()=>drag=false);
+ const keys={};addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);setInterval(()=>{if(state==="play"&&!paused){if(keys.w)player.y-=8;if(keys.s)player.y+=8;if(keys.a)player.x-=8;if(keys.d)player.x+=8;player.x=Math.max(30,Math.min(W-30,player.x));player.y=Math.max(90,Math.min(H-30,player.y))}},16);
+ $("#pauseBtn").onclick=()=>{paused=!paused;$("#pauseBtn").innerHTML=paused?"<span>▶</span>继续":"<span>Ⅱ</span>暂停"};
+ $("#bombBtn").onclick=()=>{if(paused||save.bombs<1)return toast("没有炸弹");save.bombs--;$("#bombCount").textContent=save.bombs;enemies.forEach(e=>e.hp=0);enemyBullets=[];if(bossObj){bossObj.hp-=8;if(bossObj.hp<=0){score+=50;bossObj=null}}persist();if(navigator.vibrate)navigator.vibrate([40,30,80]);toast("全屏轰炸！")};
+ function toast(t){const el=$("#toast");el.textContent=t;el.style.opacity=1;clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity=0,1200)}
+ function modal(title,text,buttons){$("#modalTitle").textContent=title;$("#modalText").textContent=text;const box=$("#modalBtns");box.innerHTML="";buttons.forEach((b,i)=>{const x=document.createElement("button");x.className="btn "+(i?"":"primary");x.textContent=b.t;x.onclick=b.f;box.append(x)});$("#modal").classList.remove("hidden")}
+ function hideModal(){$("#modal").classList.add("hidden")}
+ document.addEventListener("visibilitychange",()=>{if(document.hidden&&state==="play")paused=true});
+ (async()=>{if(!localStorage.airplaneClone){const backup=await dbRead();if(backup){save={...defaults,...backup};localStorage.airplaneClone=JSON.stringify(save);toast("已从备用存档恢复")}}updateCoins();updateSaveStatus();renderUpgrades()})();
+})();
+</script>
+</body>
+</html>
