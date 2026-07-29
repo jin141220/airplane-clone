@@ -55,7 +55,7 @@
     #toast{position:absolute;z-index:8;top:42%;left:50%;transform:translate(-50%,-50%);min-width:65%;padding:14px 18px;border:1px solid #70e8ff77;border-radius:14px;background:#030b1aeb;text-align:center;font-weight:900;font-size:20px;pointer-events:none;opacity:0;transition:opacity .2s}
     #modal{position:absolute;z-index:10;inset:0;display:grid;place-items:center;padding:24px;background:#020713cc;backdrop-filter:blur(5px)}
     .modalCard{width:100%;padding:24px;border:1px solid #61dcff66;border-radius:22px;background:#07132af2;text-align:center;box-shadow:0 20px 50px #000}
-    .modalCard h2{font-size:28px;margin:0 0 8px}.modalCard p{color:#bed4f5;line-height:1.7}.modalCard .menu{width:100%;margin-top:18px}
+    .modalCard h2{font-size:28px;margin:0 0 8px}.modalCard p{color:#bed4f5;line-height:1.7}.modalCard .menu{width:100%;margin-top:18px}.modalCard .menu.twoCols{grid-template-columns:1fr 1fr}
     @media (max-height:620px){.title{margin-top:4vh}.sub{margin-bottom:4vh}.btn{min-height:45px}.screen{padding:10px 14px}.panel{margin-top:8px}}
     @media (orientation:landscape) and (pointer:coarse){
       .hudActions{padding:0 8px max(62px,env(safe-area-inset-bottom))}
@@ -131,20 +131,47 @@ async function dbRead(){const db=await dbReady;if(!db)return null;return new Pro
 const persist=()=>{save.savedAt=Date.now();const raw=JSON.stringify(save);localStorage.airplaneClone=raw;dbWrite(save);updateCoins();updateSaveStatus()};
 let state="menu",level=1,last=0,elapsed=0,spawnClock=0,shotClock=0,bombClock=0,score=0,paused=false,ended=false,bossSpawned=false,drag=false,raf=0;
 let player={},bullets=[],enemies=[],enemyBullets=[],particles=[],bossObj=null;
-const cfg=n=>({wave:n<6?4+n:n<10?11+n:20,speed:1.15+Math.min(n,10)*.12,time:n%10===0?20:n===1?15:30,homing:n>10?Math.min(.3,(n-10)*.05):0,elite:n>15?Math.min(.5,(n-15)*.05):0,fast:n>20?(n-20)*.1:0});
+const levelConfigs={
+    1:{wave:5,speed:1.00,spawn:1000,time:10,homing:0,elite:0,fast:0},
+    2:{wave:6,speed:1.05,spawn:900,time:30,homing:0,elite:0,fast:0},
+    3:{wave:7,speed:1.10,spawn:800,time:30,homing:0,elite:0,fast:0},
+    4:{wave:8,speed:1.15,spawn:700,time:30,homing:0,elite:0,fast:0},
+    5:{wave:10,speed:1.20,spawn:500,time:30,homing:0,elite:0,fast:0},
+    6:{wave:12,speed:1.25,spawn:500,time:30,homing:0,elite:0,fast:0},
+    7:{wave:14,speed:1.30,spawn:500,time:30,homing:0,elite:0,fast:0},
+    8:{wave:16,speed:1.35,spawn:500,time:30,homing:0,elite:0,fast:0},
+    9:{wave:18,speed:1.40,spawn:500,time:30,homing:0,elite:0,fast:0},
+    10:{wave:20,speed:1.45,spawn:500,time:20,homing:0,elite:0,fast:0,bossHp:50,bossFire:1000},
+    11:{wave:20,speed:1.50,spawn:500,time:30,homing:.10,elite:0,fast:0},
+    12:{wave:20,speed:1.50,spawn:500,time:30,homing:.15,elite:0,fast:0},
+    13:{wave:20,speed:1.50,spawn:500,time:30,homing:.20,elite:0,fast:0},
+    14:{wave:20,speed:1.50,spawn:500,time:30,homing:.25,elite:0,fast:0},
+    15:{wave:20,speed:1.50,spawn:500,time:30,homing:.30,elite:0,fast:.05},
+    16:{wave:20,speed:1.50,spawn:500,time:30,homing:.30,elite:.10,fast:0},
+    17:{wave:20,speed:1.50,spawn:500,time:30,homing:.30,elite:.15,fast:0},
+    18:{wave:20,speed:1.50,spawn:500,time:30,homing:.30,elite:.20,fast:0},
+    19:{wave:20,speed:1.50,spawn:500,time:30,homing:.30,elite:.25,fast:0},
+    20:{wave:20,speed:1.50,spawn:500,time:20,homing:.30,elite:.30,fast:0,bossHp:80,bossFire:800},
+    21:{wave:20,speed:1.50,spawn:450,time:30,homing:.30,elite:.35,fast:.10},
+    22:{wave:20,speed:1.50,spawn:400,time:30,homing:.30,elite:.40,fast:.20},
+    23:{wave:20,speed:1.50,spawn:350,time:30,homing:.30,elite:.45,fast:.30},
+    24:{wave:20,speed:1.50,spawn:300,time:30,homing:.30,elite:.50,fast:.40},
+    25:{wave:20,speed:1.50,spawn:250,time:30,homing:.35,elite:.50,fast:.50}
+};
+const cfg=n=>levelConfigs[n];
 function show(id){$$(".screen").forEach(x=>x.classList.add("hidden"));$("#hud").classList.add("hidden");if(id)$("#"+id).classList.remove("hidden");state=id||"play";updateCoins()}
 function updateCoins(){$$(".coinValue").forEach(x=>x.textContent=save.coin)}
 function updateSaveStatus(){const el=$("#saveStatus");if(el)el.textContent=save.savedAt?"最近自动保存："+new Date(save.savedAt).toLocaleString():"最近自动保存：尚无记录"}
 function levels(){const g=$("#levelGrid");g.innerHTML="";for(let i=1;i<=25;i++){const b=document.createElement("button");b.className="level"+(i>save.unlock?" locked":"")+(i%10===0?" boss":"");b.innerHTML=i+(i%10===0?"<small>BOSS</small>":"<small>关卡</small>");b.disabled=i>save.unlock;b.onclick=()=>start(i);g.append(b)}show("levels")}
 const upgradeItems=[
- ["生命强化","提升最大生命值",40,"maxHp",3],["射速强化","缩短自动射击间隔",50,"shot",3],["弹幕强化","增加每轮子弹数量",60,"bullet",3],
- ["金币加成","结算金币提升至 1.5 倍",120,"boost",true],["追踪子弹","子弹自动追击敌机",180,"track",true],["清屏炸弹","战斗中立即清屏",30,"bombs",99]];
+ ["生命强化","提升最大生命值",300,"maxHp",3],["射速强化","缩短自动射击间隔",300,"shot",3],["弹幕强化","增加每轮子弹数量",300,"bullet",3],
+ ["金币加成","结算金币提升至 1.5 倍",500,"boost",true],["追踪子弹","子弹自动追击敌机",1000,"track",true],["清屏炸弹","战斗中立即清屏",300,"bombs",99]];
 function renderUpgrades(){$("#shopContent").innerHTML='<div class="shopGrid">'+upgradeItems.map(([n,d,p,k,max])=>{const val=save[k],done=max===true?val:val>=max;return `<div class="item"><h3>${n}</h3><p>${d}</p><p>${k==="bombs"?"持有 "+val:"等级 "+(typeof val==="boolean"?(val?"已拥有":"未拥有"):val)}</p><button class="btn ${done&&k!=="bombs"?"":"primary"}" data-buy="${k}" ${done&&k!=="bombs"?"disabled":""}>${done&&k!=="bombs"?"已满级":"◆ "+p}</button></div>`}).join("")+"</div>";
  $$("[data-buy]").forEach(b=>b.onclick=()=>buyUpgrade(b.dataset.buy))}
 function buyUpgrade(k){const it=upgradeItems.find(x=>x[3]===k),price=it[2];if(save.coin<price)return toast("金币不足");save.coin-=price;if(k==="boost"||k==="track")save[k]=true;else save[k]++;persist();renderUpgrades();toast("升级成功")}
-function renderFighters(){const names=["原始坦克","翡翠幻影","苍蓝幻影","赤焰重装"];$("#shopContent").innerHTML='<div class="shopGrid">'+names.map((n,i)=>`<div class="item"><img src="assets/images/${paths.player[i]}"><h3>${n}</h3><p>${i?"专属战机与子弹":"经典初始战机"}</p><button class="btn ${save.fighter===i?"":"primary"}" data-fighter="${i}">${save.fighter===i?"使用中":save.bought.includes(i)?"装备":"◆ 150"}</button></div>`).join("")+"</div>";
+function renderFighters(){const names=["原始坦克","翡翠幻影","苍蓝幻影","赤焰重装"];$("#shopContent").innerHTML='<div class="shopGrid">'+names.map((n,i)=>`<div class="item"><img src="assets/images/${paths.player[i]}"><h3>${n}</h3><p>${i?"专属战机与子弹":"经典初始战机"}</p><button class="btn ${save.fighter===i?"":"primary"}" data-fighter="${i}">${save.fighter===i?"使用中":save.bought.includes(i)?"装备":"◆ 500"}</button></div>`).join("")+"</div>";
  $$("[data-fighter]").forEach(b=>b.onclick=()=>fighter(+b.dataset.fighter))}
-function fighter(i){if(!save.bought.includes(i)){if(save.coin<150)return toast("金币不足");save.coin-=150;save.bought.push(i)}save.fighter=i;persist();renderFighters();toast("战机已装备")}
+function fighter(i){if(!save.bought.includes(i)){if(save.coin<500)return toast("金币不足");save.coin-=500;save.bought.push(i)}save.fighter=i;persist();renderFighters();toast("战机已装备")}
 $("#upgradeTab").onclick=()=>{$("#upgradeTab").classList.add("primary");$("#fighterTab").classList.remove("primary");renderUpgrades()};
 $("#fighterTab").onclick=()=>{$("#fighterTab").classList.add("primary");$("#upgradeTab").classList.remove("primary");renderFighters()};
 $$("[data-action]").forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==="levels")levels();else if(a==="shop"){show("shop");renderUpgrades()}else show(a)});
@@ -152,24 +179,24 @@ function encodeSave(){const pkg={version:VERSION,data:save};return btoa(unescape
 function decodeSave(code){const pkg=JSON.parse(decodeURIComponent(escape(atob(code.replace(/\s/g,"")))));if(pkg.version!==VERSION||!pkg.data)throw Error("version");const data=pkg.data;if(typeof data.coin!=="number"||typeof data.unlock!=="number")throw Error("data");return data}
 $("#makeSaveCode").onclick=async()=>{persist();const code=encodeSave();$("#saveCode").value=code;$("#saveCode").select();try{await navigator.clipboard.writeText(code);toast("存档码已生成并复制")}catch{toast("存档码已生成，请长按复制")}};
 $("#restoreSaveCode").onclick=()=>{try{const data=decodeSave($("#saveCode").value.trim());save={...defaults,...data,bought:Array.isArray(data.bought)?data.bought:[0]};persist();renderUpgrades();toast("存档码解析成功，进度已恢复")}catch(e){toast(e.message==="version"?"存档版本不匹配":"存档码无效")}};
-function start(n){level=n;const c=cfg(n);score=0;elapsed=0;spawnClock=0;shotClock=0;bombClock=0;ended=false;paused=false;bossSpawned=false;bossObj=null;bullets=[];enemies=[];enemyBullets=[];particles=[];player={x:W/2,y:H-110,w:save.fighter?70:74,h:save.fighter?70:50,hp:save.maxHp,inv:0};show(null);$("#hud").classList.remove("hidden");$("#hudLevel").textContent=n;$("#bossWrap").classList.add("hidden");$("#bombCount").textContent=save.bombs;music.currentTime=0;music.play().catch(()=>{});toast(n%10===0?"Boss 警报！":"战斗开始");last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop)}
+function start(n){level=n;const c=cfg(n);score=0;elapsed=0;spawnClock=0;shotClock=0;bombClock=0;ended=false;paused=false;bossSpawned=false;bossObj=null;bullets=[];enemies=[];enemyBullets=[];particles=[];player={x:W/2,y:H-110,w:save.fighter?70:74,h:save.fighter?70:50,hp:save.maxHp,inv:0};hideModal();show(null);$("#hud").classList.remove("hidden");$("#hudLevel").textContent=n;$("#bossWrap").classList.add("hidden");$("#bombCount").textContent=save.bombs;$("#pauseBtn").innerHTML="<span>Ⅱ</span>暂停";music.currentTime=0;music.play().catch(()=>{});toast(n%10===0?"Boss 警报！":"战斗开始");last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop)}
 function spawnEnemy(){const c=cfg(level),r=Math.random(),type=r<c.elite?"elite":r<c.elite+c.homing?"homing":r<c.elite+c.homing+c.fast?"fast":"normal";enemies.push({x:35+Math.random()*(W-70),y:-45,w:type==="elite"?58:42,h:type==="elite"?52:38,hp:type==="elite"?2:1,max:type==="elite"?2:1,type,v:c.speed*(type==="fast"?1.6:1),phase:Math.random()*6.28,fire:800+Math.random()*1600})}
-function spawnBoss(){bossSpawned=true;bossObj={x:W/2,y:85,w:125,h:100,hp:20+Math.floor(level/10)*10,max:20+Math.floor(level/10)*10,t:0,dir:1};$("#bossWrap").classList.remove("hidden");toast("强敌来袭")}
+function spawnBoss(){const c=cfg(level);bossSpawned=true;bossObj={x:W/2,y:85,w:125,h:100,hp:c.bossHp,max:c.bossHp,t:0,summon:0,dir:1};$("#bossWrap").classList.remove("hidden");toast("强敌来袭")}
 function shoot(){const count=save.bullet,spread=14;for(let i=0;i<count;i++){const a=(i-(count-1)/2)*spread*Math.PI/180;bullets.push({x:player.x,y:player.y-player.h/2,w:save.fighter?12:7,h:22,vx:Math.sin(a)*5,vy:-9*Math.cos(a),target:null})}}
 function loop(now){if(state!=="play")return;const dt=Math.min(34,now-last);last=now;if(!paused&&!ended)update(dt);draw();raf=requestAnimationFrame(loop)}
 function update(dt){const c=cfg(level);elapsed+=dt;spawnClock+=dt;shotClock+=dt;bombClock+=dt;player.inv=Math.max(0,player.inv-dt);
- if(shotClock>210-(save.shot-1)*55){shotClock=0;shoot()}
- if(!bossSpawned&&level%10===0&&elapsed>c.time*1000*.45)spawnBoss();
- if(!bossObj&&elapsed<c.time*1000&&spawnClock>Math.max(360,900-level*18)&&enemies.length<c.wave){spawnClock=0;spawnEnemy()}
+ if(shotClock>[300,250,200][Math.max(0,Math.min(2,save.shot-1))]){shotClock=0;shoot()}
+ if(!bossSpawned&&level%10===0&&elapsed>=c.time*1000)spawnBoss();
+ if(!bossObj&&elapsed<c.time*1000&&spawnClock>c.spawn&&enemies.length<c.wave){spawnClock=0;spawnEnemy()}
  for(const b of bullets){if(save.track){let t=b.target;if(!t||t.hp<=0)t=b.target=[...enemies,bossObj].filter(Boolean).sort((a,z)=>(a.x-b.x)**2+(a.y-b.y)**2-((z.x-b.x)**2+(z.y-b.y)**2))[0];if(t){const dx=t.x-b.x,dy=t.y-b.y,d=Math.hypot(dx,dy)||1;b.vx+=dx/d*.45;b.vy+=dy/d*.45;const s=Math.hypot(b.vx,b.vy);b.vx=b.vx/s*9;b.vy=b.vy/s*9}}b.x+=b.vx;b.y+=b.vy}
  bullets=bullets.filter(b=>b.y>-40&&b.x>-30&&b.x<W+30);
  enemies.forEach(e=>{e.y+=e.v*dt/16;e.x+=Math.sin(e.y/45+e.phase)*1.2;e.fire-=dt;if(e.type==="homing"&&e.fire<0){e.fire=1600;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy);enemyBullets.push({x:e.x,y:e.y+20,vx:dx/d*4,vy:dy/d*4})}else if(e.fire<0){e.fire=1400+Math.random()*1000;enemyBullets.push({x:e.x,y:e.y+20,vx:0,vy:4.2})}});
- if(bossObj){bossObj.t+=dt;bossObj.x+=bossObj.dir*(2.4+level/20)*dt/16;if(bossObj.x<70||bossObj.x>W-70)bossObj.dir*=-1;if(bossObj.t>1100){bossObj.t=0;[-.55,0,.55].forEach(a=>enemyBullets.push({x:bossObj.x,y:bossObj.y+45,vx:Math.sin(a)*5,vy:Math.cos(a)*5}))}}
+ if(bossObj){bossObj.t+=dt;bossObj.summon+=dt;bossObj.x+=bossObj.dir*(2.4+level/20)*dt/16;if(bossObj.x<70||bossObj.x>W-70)bossObj.dir*=-1;if(bossObj.t>c.bossFire){bossObj.t=0;[-.55,0,.55].forEach(a=>enemyBullets.push({x:bossObj.x,y:bossObj.y+45,vx:Math.sin(a)*5,vy:Math.cos(a)*5}))}if(bossObj.summon>=1000){bossObj.summon-=1000;for(let i=0;i<4;i++)spawnEnemy()}}
  enemyBullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy});enemyBullets=enemyBullets.filter(b=>b.y<H+30&&b.x>-30&&b.x<W+30);
  hitTests();enemies=enemies.filter(e=>e.hp>0&&e.y<H+60);particles.forEach(p=>{p.life-=dt;p.r+=dt*.035});particles=particles.filter(p=>p.life>0);
  const remain=Math.max(0,Math.ceil(c.time-elapsed/1000));$("#time").textContent=remain;$("#score").textContent=score;$("#hpText").textContent=player.hp+"/"+save.maxHp;$("#hpFill").style.width=player.hp/save.maxHp*100+"%";if(bossObj)$("#bossFill").style.width=bossObj.hp/bossObj.max*100+"%";
  if(player.hp<=0)finish(false);else if(level%10===0?bossSpawned&&!bossObj:elapsed>=c.time*1000&&enemies.length===0)finish(true)}
- function hitTests(){for(const b of bullets){for(const e of [...enemies,bossObj].filter(Boolean)){if(overlap(b,e)){b.y=-99;e.hp--;spark(e.x,e.y);if(e.hp<=0){score+=e===bossObj?50:e.type==="elite"?2:1;if(e===bossObj)bossObj=null;boom.currentTime=0;boom.play().catch(()=>{})}break}}}
+ function hitTests(){for(const b of bullets){for(const e of [...enemies,bossObj].filter(Boolean)){if(overlap(b,e)){b.y=-99;e.hp--;spark(e.x,e.y);if(e.hp<=0){score+=e===bossObj?100:e.type==="elite"?2:1;if(e===bossObj)bossObj=null;boom.currentTime=0;boom.play().catch(()=>{})}break}}}
  for(const e of enemies){if(overlap(player,e)){e.hp=0;damage()}}for(const b of enemyBullets){if(overlap(player,{...b,w:14,h:20})){b.y=999;damage()}}}
  function damage(){if(player.inv>0)return;player.hp--;player.inv=1200;if(navigator.vibrate)navigator.vibrate(45);spark(player.x,player.y)}
  function overlap(a,b){return Math.abs(a.x-b.x)<(a.w+b.w)/2*.72&&Math.abs(a.y-b.y)<(a.h+b.h)/2*.72}
@@ -184,10 +211,11 @@ function update(dt){const c=cfg(level);elapsed+=dt;spawnClock+=dt;shotClock+=dt;
  function pointer(e){if(state!=="play"||paused)return;const r=cv.getBoundingClientRect(),p=e.touches?e.touches[0]:e;player.x=Math.max(player.w/2,Math.min(W-player.w/2,(p.clientX-r.left)*W/r.width));player.y=Math.max(95,Math.min(H-player.h/2-8,(p.clientY-r.top)*H/r.height))}
  cv.addEventListener("pointerdown",e=>{drag=true;pointer(e)});addEventListener("pointermove",e=>{if(drag)pointer(e)});addEventListener("pointerup",()=>drag=false);
  const keys={};addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);setInterval(()=>{if(state==="play"&&!paused){if(keys.w)player.y-=8;if(keys.s)player.y+=8;if(keys.a)player.x-=8;if(keys.d)player.x+=8;player.x=Math.max(30,Math.min(W-30,player.x));player.y=Math.max(90,Math.min(H-30,player.y))}},16);
- $("#pauseBtn").onclick=()=>{paused=!paused;$("#pauseBtn").innerHTML=paused?"<span>▶</span>继续":"<span>Ⅱ</span>暂停"};
- $("#bombBtn").onclick=()=>{if(paused||save.bombs<1)return toast("没有炸弹");save.bombs--;$("#bombCount").textContent=save.bombs;enemies.forEach(e=>e.hp=0);enemyBullets=[];if(bossObj){bossObj.hp-=8;if(bossObj.hp<=0){score+=50;bossObj=null}}persist();if(navigator.vibrate)navigator.vibrate([40,30,80]);toast("全屏轰炸！")};
+ function openPauseMenu(){modal("游戏暂停","",[{t:"继续游戏",f:()=>{hideModal();paused=false;last=performance.now();$("#pauseBtn").innerHTML="<span>Ⅱ</span>暂停"}},{t:"重新开始",f:()=>modal("确认重新开始","",[{t:"确认",f:()=>start(level)},{t:"取消",f:openPauseMenu}],true)},{t:"退出游戏",f:()=>modal("确认退出游戏","",[{t:"确认",f:()=>{hideModal();ended=true;paused=false;music.pause();cancelAnimationFrame(raf);$("#pauseBtn").innerHTML="<span>Ⅱ</span>暂停";show("home")}},{t:"取消",f:openPauseMenu}],true)}])}
+ $("#pauseBtn").onclick=()=>{if(ended)return;paused=true;$("#pauseBtn").innerHTML="<span>▶</span>继续";openPauseMenu()};
+ $("#bombBtn").onclick=()=>{if(paused||save.bombs<1)return toast("没有炸弹");save.bombs--;$("#bombCount").textContent=save.bombs;enemies.forEach(e=>e.hp=0);enemyBullets=[];if(bossObj){bossObj.hp-=8;if(bossObj.hp<=0){score+=100;bossObj=null}}persist();if(navigator.vibrate)navigator.vibrate([40,30,80]);toast("全屏轰炸！")};
  function toast(t){const el=$("#toast");el.textContent=t;el.style.opacity=1;clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity=0,1200)}
- function modal(title,text,buttons){$("#modalTitle").textContent=title;$("#modalText").textContent=text;const box=$("#modalBtns");box.innerHTML="";buttons.forEach((b,i)=>{const x=document.createElement("button");x.className="btn "+(i?"":"primary");x.textContent=b.t;x.onclick=b.f;box.append(x)});$("#modal").classList.remove("hidden")}
+ function modal(title,text,buttons,twoCols=false){$("#modalTitle").textContent=title;$("#modalText").textContent=text;$("#modalText").hidden=!text;const box=$("#modalBtns");box.innerHTML="";box.classList.toggle("twoCols",twoCols);buttons.forEach((b,i)=>{const x=document.createElement("button");x.className="btn "+(i?"":"primary");x.textContent=b.t;x.onclick=b.f;box.append(x)});$("#modal").classList.remove("hidden")}
  function hideModal(){$("#modal").classList.add("hidden")}
  document.addEventListener("visibilitychange",()=>{if(document.hidden&&state==="play")paused=true});
  (async()=>{if(!localStorage.airplaneClone){const backup=await dbRead();if(backup){save={...defaults,...backup};localStorage.airplaneClone=JSON.stringify(save);toast("已从备用存档恢复")}}updateCoins();updateSaveStatus();renderUpgrades()})();
